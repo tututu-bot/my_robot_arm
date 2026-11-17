@@ -1,0 +1,21 @@
+# 构建产物
+build/
+cmake-build-*/
+*.elf
+*.bin
+*.hex
+*.map
+*.o
+*.obj
+*.su
+
+# IDE
+.idea/
+.vscode/
+*.ioc.bak
+.mxproject
+
+# macOS
+.DS_Store
+
+# 本地工具路径（每个人机器不同，不入库）
