@@ -43,13 +43,22 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 # Add sources to executable
+# 自动收集 System/ 和 HardWare/ 下所有 .c 文件，新增文件后无需再改 CMake
+# CONFIGURE_DEPENDS 让 ninja 每次构建时重新扫描目录
+file(GLOB USER_SOURCES CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/System/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/HardWare/*.c
+)
+
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user sources here
+    ${USER_SOURCES}
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined include paths
+    # System 与 HardWare 目录内的头文件自动可被 #include 找到
+    ${CMAKE_CURRENT_SOURCE_DIR}/System
+    ${CMAKE_CURRENT_SOURCE_DIR}/HardWare
 )
 
 # Add project symbols (macros)

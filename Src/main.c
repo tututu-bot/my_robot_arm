@@ -28,8 +28,7 @@
 /* USER CODE BEGIN Includes */
 
 #include <stdio.h>
-// #include "X_V2.h"
-
+#include "Step_Motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,6 +52,7 @@
 #define MOTOR_ADDR        1U        /* 驱动器 ID_Addr */
 #define PULSES_PER_REV    3200U     /* 16 细分 → 一圈 3200 脉冲 */
 #define READ_TIMEOUT_MS   100U
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,7 +64,6 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 #include <stdio.h>
 #include <stdbool.h>
-#include "Emm_V5.h"
 
 /* printf 重定向：syscalls.c 的 _write 会调用它 */
 int __io_putchar(int ch)
@@ -113,22 +112,20 @@ int main(void)
   {
     Error_Handler();
   }
-
-  printf("\r\n=== ZDT Emm 固件 CAN 测试 ===\r\n");
-
-  HAL_Delay(500);                                   /* 等驱动器上电就绪 */
-
-  /* 使能电机（F3 AB 01 00 6B） */
-  Emm_V5_En_Control(MOTOR_ADDR, true, false);
+  Motor motor_35;
+  Motor_Init(&motor_35, 1U);
+  HAL_Delay(500);
+  EnableMotor(&motor_35);
   HAL_Delay(50);
-  printf("enable sent\r\n");
-
-  /* 转 90°：位置模式，参数是脉冲数 */
-  Emm_V5_Pos_Control(MOTOR_ADDR, 0, 200, 10,
-                     PULSES_PER_REV / 4,   /* 90° = 800 脉冲 */
-                     false, false);
+  moveAngle(&motor_35, 0, 90.0f);
   HAL_Delay(1500);
-  printf("move 90 deg done\r\n");
+  Motor motor_42;
+  Motor_Init(&motor_42, 2U);
+  HAL_Delay(500);
+  EnableMotor(&motor_42);
+  HAL_Delay(50);
+  moveAngle(&motor_42, 0, 90.0f);
+  HAL_Delay(1500);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -136,59 +133,10 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    readCurrentAngle(&motor_42);
+    HAL_Delay(500);
     /* USER CODE BEGIN 3 */
-    {
-      int32_t  raw;
-      float    angle;
 
-      /* 1. 发读实时位置命令：01 36 6B */
-      can.rxFrameFlag = false;
-      Emm_V5_Read_Sys_Params(MOTOR_ADDR, S_CPOS);
-
-      /* 2. 等回帧（带超时，不卡死） */
-      {
-        uint32_t t0 = HAL_GetTick();
-        while (!can.rxFrameFlag && (HAL_GetTick() - t0) < READ_TIMEOUT_MS) { }
-      }
-
-      /* 3. 解析 */
-      if (can.rxFrameFlag)
-      {
-        can.rxFrameFlag = false;
-
-        if (can.rxData[0] == 0x36U)
-        {
-          /* 回帧：[0]=0x36  [1]=符号  [2..5]=位置  [6]=0x6B */
-          raw = ((int32_t)can.rxData[2] << 24) |
-                ((int32_t)can.rxData[3] << 16) |
-                ((int32_t)can.rxData[4] << 8)  |
-                ((int32_t)can.rxData[5]);
-          if (can.rxData[1] != 0U) { raw = -raw; }
-
-          /* Emm 固件换算：0~65536 表示一圈 360° */
-          angle = (float)raw * 360.0f / 65536.0f;
-
-          printf("angle = %ld.%ld deg  (DLC=%d raw=%ld)\r\n",
-                 (long)(angle),
-                 (long)((angle >= 0 ? angle : -angle) * 10) % 10,
-                 can.CAN_RxMsg.DLC,
-                 (long)raw);
-        }
-        else
-        {
-          printf("unexpected code = 0x%02X, DLC=%d\r\n",
-                 can.rxData[0], can.CAN_RxMsg.DLC);
-        }
-      }
-      else
-      {
-        printf("timeout | ESR=0x%08lX MSR=0x%08lX\r\n",
-               (unsigned long)CAN1->ESR, (unsigned long)CAN1->MSR);
-      }
-    }
-
-    HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
